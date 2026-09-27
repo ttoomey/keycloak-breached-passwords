@@ -12,7 +12,7 @@ they're set. A login-time check may follow.
 | Path | Purpose |
 | --- | --- |
 | `Dockerfile` | Build/test container (Maven 3.9, JDK 21). |
-| `docker-compose.yml` | `dev` (Maven), `keycloak` (Keycloak 26.7.4 with the built jar), `hibp` (WireMock standing in for the HIBP API). |
+| `docker-compose.yml` | `dev` (one-off Maven commands), `shell` (long-running Maven shell), `keycloak` (Keycloak 26.7.4 with the built jar), `hibp` (WireMock standing in for the HIBP API). |
 | `providers/` | `mvn package` writes the jar here; it's mounted into Keycloak's `providers/`. |
 | `src/test/resources/realm/` | Dev realm. It's imported by the `keycloak` service and by the tests. |
 | `src/test/resources/wiremock/mappings/` | HIBP stubs. They're loaded by the `hibp` service and by the tests. |
@@ -28,6 +28,9 @@ docker compose up -d keycloak
 
 # Load a rebuilt jar
 docker compose restart keycloak
+
+# Long-running build shell, e.g. for VS Code "Attach to Running Container"
+docker compose up -d shell
 ```
 
 - Admin console: http://localhost:8080 (`admin` / `admin`)

@@ -1,20 +1,33 @@
+x-maven: &maven
+  build: .
+  volumes:
+    - .:/workspace
+    - maven-repo:/root/.m2
+    # Testcontainers starts Keycloak and WireMock as sibling containers.
+    - /var/run/docker.sock:/var/run/docker.sock
+  environment:
+    # Sibling containers publish ports on the Docker host, not in this
+    # container, so point Testcontainers at the host.
+    TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+  extra_hosts:
+    # Docker Desktop defines host.docker.internal; this adds it on Linux.
+    - "host.docker.internal:host-gateway"
+
 services:
-  # Maven build/test shell:
+  # One-off Maven commands:
   #   docker compose run --rm dev mvn package
   dev:
-    build: .
-    volumes:
-      - .:/workspace
-      - maven-repo:/root/.m2
-      # Testcontainers starts Keycloak and WireMock as sibling containers.
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      # Sibling containers publish ports on the Docker host, not in this
-      # container, so point Testcontainers at the host.
-      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
-    extra_hosts:
-      # Docker Desktop defines host.docker.internal; this adds it on Linux.
-      - "host.docker.internal:host-gateway"
+    <<: *maven
+
+  # Long-running shell to attach an editor to:
+  #   docker compose up -d shell
+  shell:
+    <<: *maven
+    profiles:
+      - manual
+    stdin_open: true
+    tty: true
+    command: /bin/bash
 
   # Keycloak with the built provider jar, at http://localhost:8080 (admin/admin).
   # Restart it after rebuilding the jar.
