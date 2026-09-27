@@ -8,9 +8,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Objects;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -34,7 +36,10 @@ class EnvironmentSmokeTest {
           .waitingFor(Wait.forHttp("/__admin/health"));
 
   static final KeycloakContainer keycloak =
-      new KeycloakContainer(System.getProperty("keycloak.image"))
+      new KeycloakContainer(
+              Objects.requireNonNull(
+                  System.getProperty("keycloak.image"),
+                  "keycloak.image is unset; Surefire sets it from pom.xml, so run via mvn test"))
           .withNetwork(network)
           .withRealmImportFile("/realm/dev-realm.json")
           .dependsOn(hibp);
@@ -68,6 +73,21 @@ class EnvironmentSmokeTest {
 
     assertEquals(200, response.statusCode());
     assertTrue(response.body().contains("1E4C9B93F3F0682250B6CF8331B7EE68FD8:10434004"));
+  }
+
+  @Test
+  void keycloakReachesWiremockByNetworkAlias() throws Exception {
+    // The Keycloak image has no curl, so send a raw request over bash's /dev/tcp.
+    ExecResult result =
+        keycloak.execInContainer(
+            "bash",
+            "-c",
+            "exec 3<>/dev/tcp/hibp/8080"
+                + " && printf 'GET /range/5BAA6 HTTP/1.0\\r\\nHost: hibp\\r\\n\\r\\n' >&3"
+                + " && cat <&3");
+
+    assertEquals(0, result.getExitCode(), result.getStderr());
+    assertTrue(result.getStdout().contains("1E4C9B93F3F0682250B6CF8331B7EE68FD8:10434004"));
   }
 
   private static HttpResponse<String> get(String url) throws Exception {

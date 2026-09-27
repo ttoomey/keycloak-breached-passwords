@@ -23,8 +23,10 @@ they're set. A login-time check may follow.
 # Build the jar into providers/ and run the tests
 docker compose run --rm dev mvn package
 
-# Start Keycloak and the HIBP stub (restart keycloak after each rebuild)
-docker compose up keycloak
+# Start Keycloak and the HIBP stub
+docker compose up -d keycloak
+
+# Load a rebuilt jar
 docker compose restart keycloak
 ```
 
@@ -60,8 +62,12 @@ The stubs mirror the real
 | Password | Prefix | Stub result |
 | --- | --- | --- |
 | `password` | `5BAA6` | Pwned: suffix `1E4C9B93F3F0682250B6CF8331B7EE68FD8`, count 10434004 |
+| `correct-horse-battery-staple` | `DD606` | Pwned: suffix `CD49BBBD06B4C2606FC2449F8FB87975786`, count 386 |
 | `hibp-outage-simulation-password` | `F8CBE` | HTTP 503 |
 | anything else | any | 200 with padding entries only (not pwned) |
+
+`password` fails the dev realm's `length(15)` rule before HIBP is checked, so
+use `correct-horse-battery-staple` to try the pwned path by hand.
 
 ## Dev realm
 
