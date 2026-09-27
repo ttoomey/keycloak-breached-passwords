@@ -1,0 +1,24 @@
+{
+  "realm": "breached-passwords-dev",
+  "enabled": true,
+  "displayName": "Breached Passwords Dev",
+  "loginWithEmailAllowed": true,
+  "registrationEmailAsUsername": true,
+  "duplicateEmailsAllowed": false,
+  "passwordPolicy": "length(15) and notUsername and notEmail and notContainsUsername and passwordHistory(5)",
+  "users": [
+    {
+      "username": "hibp-tester@example.com",
+      "email": "hibp-tester@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "temporary-password-for-dev",
+          "temporary": true
+        }
+      ]
+    }
+  ]
+}

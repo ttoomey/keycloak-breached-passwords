@@ -1,0 +1,47 @@
+services:
+  # Maven build/test shell:
+  #   docker compose run --rm dev mvn package
+  dev:
+    build: .
+    volumes:
+      - .:/workspace
+      - maven-repo:/root/.m2
+      # Testcontainers starts Keycloak and WireMock as sibling containers.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Sibling containers publish ports on the Docker host, not in this
+      # container, so point Testcontainers at the host.
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    extra_hosts:
+      # Docker Desktop defines host.docker.internal; this adds it on Linux.
+      - "host.docker.internal:host-gateway"
+
+  # Keycloak with the built provider jar, at http://localhost:8080 (admin/admin).
+  # Restart it after rebuilding the jar.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./providers:/opt/keycloak/providers:ro
+      - ./src/test/resources/realm:/opt/keycloak/data/import:ro
+    depends_on:
+      - hibp
+
+  # WireMock standing in for api.pwnedpasswords.com, at http://hibp:8080
+  # inside the compose network and http://localhost:8081 from the host.
+  # The tests load the same stub mappings.
+  hibp:
+    image: wiremock/wiremock:3.13.2
+    command: ["--disable-banner"]
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./src/test/resources/wiremock/mappings:/home/wiremock/mappings:ro
+
+volumes:
+  maven-repo:

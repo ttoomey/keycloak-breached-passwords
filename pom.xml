@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.greenriver</groupId>
+  <artifactId>keycloak-breached-passwords</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Keep in sync with the image tag in docker-compose.yml. Tests get
+         the image from the keycloak.image property set below. -->
+    <keycloak.version>26.7.4</keycloak.version>
+  </properties>
+
+  <dependencies>
+    <!-- KeycloakSession, RealmModel, UserModel, etc. -->
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-server-spi</artifactId>
+      <version>${keycloak.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- PasswordPolicyProvider(Factory). This SPI is internal, so Keycloak
+         logs a startup warning for providers that implement it. -->
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-server-spi-private</artifactId>
+      <version>${keycloak.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Boots Keycloak in a container; also brings Testcontainers core, used
+         to run WireMock as the HIBP stand-in. -->
+    <dependency>
+      <groupId>com.github.dasniko</groupId>
+      <artifactId>testcontainers-keycloak</artifactId>
+      <version>4.3.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.3</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <systemPropertyVariables>
+            <keycloak.image>quay.io/keycloak/keycloak:${keycloak.version}</keycloak.image>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <!-- Written outside target/ so `mvn clean` doesn't remove the
+               directory docker-compose mounts into Keycloak. -->
+          <outputDirectory>${project.basedir}/providers</outputDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
