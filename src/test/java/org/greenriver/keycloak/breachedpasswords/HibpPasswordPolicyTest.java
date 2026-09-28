@@ -10,9 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.ws.rs.core.Response;
+import java.io.IOException;
+import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -184,7 +187,7 @@ class HibpPasswordPolicyTest {
 
     private final HttpClient http =
         HttpClient.newBuilder()
-            .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
+            .cookieHandler(new SecureContextCookieHandler())
             .followRedirects(HttpClient.Redirect.NEVER)
             .connectTimeout(HTTP_TIMEOUT)
             .build();
@@ -256,6 +259,43 @@ class HibpPasswordPolicyTest {
                       + "="
                       + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
           .collect(Collectors.joining("&"));
+    }
+  }
+
+  /**
+   * Keycloak marks its cookies {@code Secure} when the host is {@code localhost} or a loopback
+   * address, as it is on CI. Browsers send those over plain http because they treat loopback as
+   * a secure context, but {@link CookieManager} doesn't, so this stores and looks up cookies as
+   * if the URL were https.
+   */
+  static final class SecureContextCookieHandler extends CookieHandler {
+
+    private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+
+    @Override
+    public Map<String, List<String>> get(URI uri, Map<String, List<String>> requestHeaders)
+        throws IOException {
+      return cookies.get(https(uri), requestHeaders);
+    }
+
+    @Override
+    public void put(URI uri, Map<String, List<String>> responseHeaders) throws IOException {
+      cookies.put(https(uri), responseHeaders);
+    }
+
+    private static URI https(URI uri) {
+      try {
+        return new URI(
+            "https",
+            uri.getUserInfo(),
+            uri.getHost(),
+            uri.getPort(),
+            uri.getPath(),
+            uri.getQuery(),
+            uri.getFragment());
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
     }
   }
 }
