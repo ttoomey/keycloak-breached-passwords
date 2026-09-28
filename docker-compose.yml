@@ -2,7 +2,7 @@ x-maven: &maven
   build: .
   volumes:
     - .:/workspace
-    - maven-repo:/root/.m2
+    - root:/root
     # Testcontainers starts Keycloak and WireMock as sibling containers.
     - /var/run/docker.sock:/var/run/docker.sock
   environment:
@@ -57,4 +57,4 @@ services:
       - ./src/test/resources/wiremock/mappings:/home/wiremock/mappings:ro
 
 volumes:
-  maven-repo:
+  root:
