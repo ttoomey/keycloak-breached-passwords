@@ -36,6 +36,28 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Config and logging. Keycloak provides both at runtime. -->
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-core</artifactId>
+      <version>${keycloak.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>jboss-logging</artifactId>
+      <version>3.6.2.Final</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Parses the login forms in the integration tests. -->
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.21.2</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Boots Keycloak in a container; also brings Testcontainers core, used
          to run WireMock as the HIBP stand-in. -->
     <dependency>

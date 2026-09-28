@@ -2,10 +2,31 @@
 
 Keycloak extensions that check passwords against known data breaches, using
 [Have I Been Pwned](https://haveibeenpwned.com/API/v3#PwnedPasswords).
-The first planned piece is a password policy, which checks passwords when
-they're set. A login-time check may follow.
+The first piece is a password policy, which checks passwords when they're
+set. A login-time check may follow.
 
-**Status:** build and test scaffolding only; there's no provider code yet.
+**Status:** MVP password policy (`hibp`). No caching, no configurable breach
+threshold, English messages only.
+
+## Password policy
+
+Enable it in a realm's password policy, e.g. `length(15) and hibp` (Admin
+Console: *Authentication → Policies → Not Breached (Have I Been Pwned)*). It
+rejects any password that appears in the Pwned Passwords corpus. Only the
+first 5 hex characters of the password's SHA-1 are sent, with
+`Add-Padding: true`.
+
+If HIBP can't be reached after 3 attempts (500 ms connect, 1 s read timeout,
+250/500 ms backoff), the check fails open: the password is accepted and one
+WARN line is logged. A 4xx other than 429, or an unparseable 200, fails open
+right away.
+
+| SPI key | Env var | Default |
+| --- | --- | --- |
+| `base-url` | `KC_SPI_PASSWORD_POLICY__HIBP__BASE_URL` | `https://api.pwnedpasswords.com` |
+
+The base URL is server config, not realm config. Keycloak won't start if it
+isn't an absolute `http(s)` URL with a host and no query or fragment.
 
 ## Layout
 
@@ -39,7 +60,7 @@ docker compose up -d shell
   temporary, so Keycloak forces a password change, which runs the realm's
   password policy.
 - HIBP stub: `http://hibp:8080` from Keycloak, `http://localhost:8081` from
-  the host. Configure the provider's API base URL to the former.
+  the host. Compose points the policy's `base-url` at the former.
 
 Data is ephemeral. `start-dev` uses an in-container H2 database, and the realm
 is re-imported whenever the container is recreated.
@@ -53,8 +74,10 @@ mounts the Docker socket and sets `TESTCONTAINERS_HOST_OVERRIDE` so this works
 inside the container. `mvn test` on the host also works if Docker is
 available there.
 
-`EnvironmentSmokeTest` only checks the tooling. Once the provider exists, add
-`.withProviderClassesFrom("target/classes")` to the `KeycloakContainer`.
+`TestEnvironment` starts both containers once per test run, with the provider
+loaded from `target/classes`. `EnvironmentSmokeTest` checks the tooling.
+`HibpPasswordPolicyTest` drives the login theme's Update Password form.
+`BreachCheckerTest` and `BaseUrlTest` are plain unit tests.
 
 ### HIBP stubs
 
@@ -67,6 +90,7 @@ The stubs mirror the real
 | `password` | `5BAA6` | Pwned: suffix `1E4C9B93F3F0682250B6CF8331B7EE68FD8`, count 10434004 |
 | `correct-horse-battery-staple` | `DD606` | Pwned: suffix `CD49BBBD06B4C2606FC2449F8FB87975786`, count 386 |
 | `hibp-outage-simulation-password` | `F8CBE` | HTTP 503 |
+| `hibp-timeout-simulation-password` | `C02ED` | 200 with padding only, after 1.5 s (past the 1 s read timeout) |
 | anything else | any | 200 with padding entries only (not pwned) |
 
 `password` fails the dev realm's `length(15)` rule before HIBP is checked, so
@@ -74,16 +98,18 @@ use `correct-horse-battery-staple` to try the pwned path by hand.
 
 ## Dev realm
 
-`dev-realm.json` defines the `breached-passwords-dev` realm. It has only
+`breached-passwords-dev-realm.json` defines the `breached-passwords-dev`
+realm. Keycloak requires the file name to match the realm name. It has only
 what's needed to exercise a password policy:
 
-- A sample `passwordPolicy` of built-in rules, so the HIBP check runs
+- A `passwordPolicy` of built-in rules plus `hibp`, so the HIBP check runs
   alongside other policies.
 - Email as username, which the `notUsername` / `notEmail` rules depend on.
 - The test user described above.
 
-Add the HIBP policy to `passwordPolicy` only after the provider exists.
-Importing a realm that names an unknown policy fails.
+Importing the realm checks the test user's password against HIBP too. When
+compose starts, WireMock may not be ready yet. The check then fails open
+after about 5 s and logs one WARN, which only slows startup.
 
 ## Known constraints
 
@@ -92,4 +118,10 @@ Importing a realm that names an unknown policy fails.
   and upgrades may change the interface.
 - The Keycloak version is set in two places: `keycloak.version` in `pom.xml`
   and the image tag in `docker-compose.yml`. The WireMock image tag also
-  appears in both `docker-compose.yml` and `EnvironmentSmokeTest`.
+  appears in both `docker-compose.yml` and `TestEnvironment`.
+- The HIBP request uses Keycloak's shared HTTP client, which keeps Apache
+  HttpClient's automatic retries. A connection reset can resend a request up
+  to 3 more times within one of our attempts. Timeouts and HTTP errors
+  aren't resent.
+- There's no overall deadline. The worst case is usually about 5.25 s, but a
+  slow-dripping server or a slow DNS lookup can take longer.

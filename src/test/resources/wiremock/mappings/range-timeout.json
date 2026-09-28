@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/range/C02ED"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 1500,
+    "headers": {
+      "Content-Type": "text/plain"
+    },
+    "body": "0018A45C4D1DEF81644B54AB7F969B88D65:0\r\n00D4F6E8FA6EECAD2A3AA415EEC418D38EC:0\r\n011053FD0102E94D6AE2F8B83D76FAF94F6:0"
+  }
+}

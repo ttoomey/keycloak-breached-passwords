@@ -16,6 +16,6 @@ docker compose up keycloak                 # restart it after each rebuild to lo
 
 ## Gotchas
 
-- `docker-compose.yml` and the Testcontainers tests load the same fixtures: `src/test/resources/realm/dev-realm.json` and `src/test/resources/wiremock/mappings/`. Changing one affects both.
-- Don't add the HIBP policy to `passwordPolicy` in `dev-realm.json` until the provider exists. Importing a realm that names an unknown policy fails.
-- Versions are pinned in two places each: Keycloak in `pom.xml` (`keycloak.version`) and `docker-compose.yml`; WireMock in `docker-compose.yml` and `EnvironmentSmokeTest`.
+- `docker-compose.yml` and the Testcontainers tests load the same fixtures: `src/test/resources/realm/breached-passwords-dev-realm.json` and `src/test/resources/wiremock/mappings/`. Changing one affects both.
+- Versions are pinned in two places each: Keycloak in `pom.xml` (`keycloak.version`) and `docker-compose.yml`; WireMock in `docker-compose.yml` and `TestEnvironment`.
+- The realm file name must match the realm name (`<realm>-realm.json`), or Keycloak refuses to import it.
