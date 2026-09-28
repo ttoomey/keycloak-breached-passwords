@@ -1,0 +1,45 @@
+name: Release
+
+# Push a tag like v1.0.0 to publish that commit's jar as a GitHub Release.
+# The tag must match <version> in pom.xml (without the leading "v").
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Check the tag matches the pom version
+        run: |
+          version=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match pom.xml version $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # Same build and tests as the Tests workflow, so a release only exists
+      # if everything passes.
+      - run: mvn -B verify
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jar="keycloak-breached-passwords-$VERSION.jar"
+          cp providers/keycloak-breached-passwords.jar "$jar"
+          sha256sum "$jar" > "$jar.sha256"
+          gh release create "$GITHUB_REF_NAME" "$jar" "$jar.sha256" \
+            --verify-tag --generate-notes --title "$GITHUB_REF_NAME"

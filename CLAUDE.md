@@ -17,5 +17,6 @@ docker compose up keycloak                 # restart it after each rebuild to lo
 ## Gotchas
 
 - `docker-compose.yml` and the Testcontainers tests load the same fixtures: `src/test/resources/realm/breached-passwords-dev-realm.json` and `src/test/resources/wiremock/mappings/`. Changing one affects both.
-- Versions are pinned in two places each: Keycloak in `pom.xml` (`keycloak.version`) and `docker-compose.yml`; WireMock in `docker-compose.yml` and `TestEnvironment`.
+- Versions are pinned in two places each: Keycloak in `pom.xml` (`keycloak.version`) and `docker-compose.yml`; WireMock in `docker-compose.yml` and `TestEnvironment`. Java 21 is set in `pom.xml`, `Dockerfile` and both `.github/workflows/` files.
+- `release.yml` fails unless the tag (`v1.2.3`) matches `<version>` in `pom.xml`.
 - The realm file name must match the realm name (`<realm>-realm.json`), or Keycloak refuses to import it.

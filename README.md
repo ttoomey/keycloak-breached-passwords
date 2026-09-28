@@ -32,6 +32,7 @@ isn't an absolute `http(s)` URL with a host and no query or fragment.
 
 | Path | Purpose |
 | --- | --- |
+| `.github/workflows/` | `tests.yml` runs the tests on PRs and `main`; `release.yml` publishes a release on a `v*` tag. |
 | `Dockerfile` | Build/test container (Maven 3.9, JDK 21). |
 | `docker-compose.yml` | `dev` (one-off Maven commands), `shell` (long-running Maven shell), `keycloak` (Keycloak 26.7.4 with the built jar), `hibp` (WireMock standing in for the HIBP API). |
 | `providers/` | `mvn package` writes the jar here; it's mounted into Keycloak's `providers/`. |
@@ -110,6 +111,19 @@ what's needed to exercise a password policy:
 Importing the realm checks the test user's password against HIBP too. When
 compose starts, WireMock may not be ready yet. The check then fails open
 after about 5 s and logs one WARN, which only slows startup.
+
+## Releasing
+
+Set `<version>` in `pom.xml` to the release version (no `-SNAPSHOT`), commit,
+then push a matching tag, e.g. `git tag v1.0.0 && git push origin v1.0.0`.
+The release workflow runs the tests and attaches
+`keycloak-breached-passwords-<version>.jar` and its `.sha256` to a GitHub
+Release. In prod, copy the jar into a custom Keycloak image and run
+`kc.sh build`. Leave `base-url` unset there so it uses the real API.
+
+A Keycloak upgrade doesn't usually need a new jar. Bump the Keycloak version
+(see below) in a PR; if the tests pass with no code changes, the existing jar
+still works.
 
 ## Known constraints
 
