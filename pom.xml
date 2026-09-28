@@ -6,7 +6,7 @@
 
   <groupId>org.greenriver</groupId>
   <artifactId>keycloak-breached-passwords</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>0.2.0</version>
   <packaging>jar</packaging>
 
   <properties>
